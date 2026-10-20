@@ -1,0 +1,285 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>LoadSim 3D – Container & Truck Load Planner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f5f6f8;--pn:#fff;--tx:#1b2330;--mu:#6b7686;--bd:#dde1e8;--ac:#1f6feb;--ok:#1a9d5a;--bad:#d03b3b;--vb:#e9edf3;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#12161c;--pn:#1b212a;--tx:#e8ecf2;--mu:#93a0b2;--bd:#2c3542;--ac:#5aa0ff;--vb:#0e1217;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#12161c;--pn:#1b212a;--tx:#e8ecf2;--mu:#93a0b2;--bd:#2c3542;--ac:#5aa0ff;--vb:#0e1217;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:12px 18px;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--bd);background:var(--pn)}header h1{font-size:17px;margin:0}header span{color:var(--mu);font-size:12px}
+main{display:grid;grid-template-columns:minmax(330px,430px) 1fr;gap:14px;padding:14px;max-width:1500px;margin:auto}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.card{background:var(--pn);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:12px}
+h2{font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;color:var(--mu)}
+select,input{background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:5px 6px;font:inherit;min-width:0}
+input[type=color]{padding:0;width:26px;height:26px;border:none;background:none}
+button{background:var(--ac);color:#fff;border:0;border-radius:7px;padding:7px 12px;font:inherit;cursor:pointer;font-weight:600}
+button.g{background:var(--bg);color:var(--tx);border:1px solid var(--bd);font-weight:500}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.dims{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.dims label{font-size:11px;color:var(--mu)}.dims input{width:100%}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:12px}th{font-weight:500;color:var(--mu);text-align:left;padding:2px}td{padding:2px}
+td input{width:100%}td input.n{width:54px}td select{width:70px;padding:4px 2px}
+#view{height:min(62vh,560px);min-height:320px;background:var(--vb);border-radius:10px;border:1px solid var(--bd);position:relative;cursor:grab;touch-action:none}
+#view canvas{display:block;border-radius:10px}.hint{position:absolute;left:8px;bottom:6px;font-size:11px;color:var(--mu)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:10px 0}.st{background:var(--bg);border-radius:8px;padding:8px}.st b{display:block;font-size:18px}.st i{font-style:normal;font-size:11px;color:var(--mu)}
+.bar{height:6px;background:var(--bd);border-radius:4px;overflow:hidden;margin-top:4px}.bar div{height:100%;background:var(--ok)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px}.leg span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--c);margin-right:5px}
+.warn{color:var(--bad);font-size:12px;margin:4px 0}.cmp td,.cmp th{padding:5px 4px;border-bottom:1px solid var(--bd)}.cmp tr.best td{font-weight:600;color:var(--ok)}.cmp tr{cursor:pointer}
+.ci{display:flex;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--bd);cursor:pointer;border-radius:6px}.ci:hover{background:var(--bg)}.ci .b{font-size:11px;color:var(--ac);white-space:nowrap}.mu{font-size:11px;color:var(--mu)}
+.x{background:none;color:var(--bad);padding:2px 6px}input[type=range]{flex:1;padding:0}
+</style></head><body>
+<header><h1>🚛 LoadSim 3D</h1><span>Real box-by-box placement · mixed loads · Excel import</span></header>
+<main>
+<section>
+<div class="card"><h2>1 · Cargo space</h2>
+<div class="row"><select id="sp" style="flex:1"></select></div>
+<div class="dims"><div><label>Length</label><input id="cl" type="number"></div><div><label>Width</label><input id="cw" type="number"></div><div><label>Height</label><input id="ch" type="number"></div><div><label>Max kg</label><input id="cp" type="number"></div></div>
+<div style="font-size:11px;color:var(--mu);margin-top:4px">Cargo space is in cm / kg.</div></div>
+<div class="card"><h2>2 · Products</h2>
+<div class="row"><button id="add">＋ Add product</button><label class="g" style="cursor:pointer"><button class="g" onclick="xl.click()">📄 Import Excel/CSV</button></label><input id="xl" type="file" accept=".xlsx,.xls,.csv" hidden><button class="g" id="sv">💾 Save</button><button class="g" id="clr">Clear</button><span id="svm" style="font-size:11px;color:var(--ok)"></span></div>
+<div class="row"><label style="font-size:12px">Product size unit</label><select id="un"><option value="1">cm</option><option value="0.1">mm</option><option value="100">m</option><option value="2.54">inch</option></select><span style="font-size:11px;color:var(--mu)">applies to the table and Excel import</span></div><div style="font-size:11px;color:var(--mu);margin-bottom:6px">Smart import: finds the product table anywhere in the file – headers in any row or column, names before, after or above the sizes, or sizes written like 60x40x30.</div><div id="imsg" style="font-size:12px;margin-bottom:6px"></div>
+<div class="tw"><table><thead><tr id="hd"></tr></thead><tbody id="tb"></tbody></table></div></div>
+<div class="card" id="palc"><h2>Pallet builder</h2>
+<div class="row"><select id="pbp" style="flex:1"></select><select id="pbt"><option value="120,80">EUR 120×80</option><option value="120,100">120×100</option><option value="114,114">114×114</option><option value="c">Custom</option></select></div>
+<div class="dims"><div><label>Pallet L (cm)</label><input id="pdl" type="number" value="120"></div><div><label>Pallet W</label><input id="pdw" type="number" value="80"></div><div><label>Base height</label><input id="pbh" type="number" value="15"></div><div><label>Max total h</label><input id="pmh" type="number" value="180"></div></div>
+<div class="dims" style="margin-top:6px"><div><label>Max gross kg</label><input id="pmw" type="number" value="1000"></div><div><label>Pallet kg</label><input id="ppw" type="number" value="25"></div><div style="grid-column:span 2;align-self:end;font-size:12px"><label style="font-size:12px;color:var(--tx)"><input type="checkbox" id="pst" style="width:auto"> pallets may be stacked</label></div></div>
+<div id="ppv" class="mu" style="margin:8px 0"></div><div class="row"><button id="pgo">📦 Make pallets from this product</button><span id="pmsg" style="font-size:12px"></span></div></div>
+<div class="card" id="catc" style="display:none"><h2>Imported products – click to add</h2><div class="row"><input id="cats" placeholder="Search…" style="flex:1"><button class="g" id="cata">Add all shown</button><button class="g" id="catx">Remove list</button></div><div id="catl" style="max-height:260px;overflow:auto"></div></div>
+<div class="row"><button id="go" style="flex:1;padding:11px">▶ Calculate &amp; simulate</button><button id="th" class="g" style="padding:11px" title="Tries many random layouts for about 4 seconds and keeps the best">🔍 Try harder</button></div>
+<div class="card" id="refc" style="display:none"><h2>Reference check – your table vs simulator</h2><div class="tw"><table class="cmp"><thead><tr><th>Product</th><th>Column → space</th><th>Table</th><th>Sim</th><th>Δ</th></tr></thead><tbody id="refb"></tbody></table></div></div>
+<div class="card" id="cmpc" style="display:none"><h2>Which container fits best?</h2><div class="tw"><table class="cmp"><thead><tr><th>Space</th><th>Units needed</th><th>Last fill</th></tr></thead><tbody id="cmp"></tbody></table></div></div>
+</section>
+<section>
+<div id="view"><div class="hint">Drag = rotate · wheel/pinch = zoom · right-drag = pan</div></div>
+<div class="card" style="margin-top:12px"><div class="row"><button class="g" id="pl">▶ Play loading</button><input id="sl" type="range" min="0" max="0" value="0"><span id="sn" style="min-width:90px;font-size:12px"></span><label style="font-size:12px;white-space:nowrap"><input type="checkbox" id="cv" checked style="width:auto"> cartons on pallets</label></div>
+<div class="row" id="tabs"></div>
+<div class="row"><button class="g" id="pdf">📄 Download PDF report</button><button class="g" id="shr">🔗 Copy share code</button><input id="opn" placeholder="Paste a share code…" style="flex:1;min-width:120px"><button class="g" id="opb">Open</button></div><div id="shm" class="mu"></div>
+<div class="stats" id="stats"></div><div id="msgs"></div><div class="leg" id="leg"></div></div>
+</section></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const SP={"20’ Standard":[589,235,239,28000],"40’ Standard":[1203,235,239,26500],"40’ High Cube":[1203,235,269,26500],"45’ High Cube":[1356,235,269,27500],"Van 3.5 t":[420,200,210,1200],"Truck 7.5 t":[620,245,250,3000],"Semi-trailer 13.6 m":[1360,248,270,24000],"Mega trailer":[1360,248,300,24000],"Jumbo trailer":[1630,250,295,24000],"53’ US trailer":[1599,249,279,20000],"Truck 10 t":[720,245,250,10000],"Truck 18 t":[900,245,260,18000],"Custom":[500,200,200,5000]};
+const PAL=["#e76f51","#2a9d8f","#e9c46a","#4d7cfe","#b56cf0","#f4a261","#6bbf59","#e05297","#33b5e5","#a0856c"];
+let items=[{n:"Carton A",l:60,w:40,h:40,wt:14,q:40,r:1,s:1},{n:"Carton B",l:80,w:60,h:50,wt:22,q:20,r:1,s:1},{n:"Crate C (fragile)",l:120,w:80,h:70,wt:60,q:6,r:1,s:0}];
+let res=null,cur=0,step=0,timer=null,catalog=[],catQ="";
+Object.keys(SP).forEach(k=>{const v=SP[k];$("sp").add(new Option(k=="Custom"?k:k+" · "+(v[0]*v[1]*v[2]/1e6).toFixed(0)+" m³",k))});$("sp").value="40’ Standard";
+function setSp(){const v=SP[$("sp").value];["cl","cw","ch","cp"].forEach((id,i)=>{$(id).value=v[i]});}
+function C(){return{l:+$("cl").value,w:+$("cw").value,h:+$("ch").value,p:+$("cp").value}}
+$("sp").onchange=()=>{setSp();run()};["cl","cw","ch","cp"].forEach(id=>$(id).onchange=()=>{$("sp").value="Custom";run()});setSp();
+function U(){return +$("un").value}function fm(v){return +(v/U()).toFixed(3)}function draw(){const u=$("un").selectedOptions[0].text;$("hd").innerHTML=`<th></th><th>Name</th><th>L (${u})</th><th>W (${u})</th><th>H (${u})</th><th>kg</th><th>Qty</th><th>Turn</th><th>Stack</th><th title="Max kg allowed on top of this product. Blank = no limit">Top kg</th><th></th>`;$("tb").innerHTML=items.map((it,i)=>`<tr data-i="${i}"><td><input type="color" data-k="c" value="${PAL[i%10]}" disabled style="opacity:1"></td><td><input data-k="n" value="${it.n}"></td>${["l","w","h","wt"].map(k=>`<td><input class="n" type="number" min="0" step="any" data-k="${k}" value="${k=="wt"?it[k]:fm(it[k])}"></td>`).join("")}<td><input class="n" style="width:46px" type="number" min="1" data-k="q" value="${it.q}"></td><td><select data-k="r"><option value="1"${it.r?" selected":""}>Upright</option><option value="0"${it.r?"":" selected"}>Any</option></select></td><td><input type="checkbox" data-k="s" ${it.s?"checked":""}></td><td><input class="n" style="width:50px" type="number" min="0" data-k="mt" placeholder="∞" value="${it.mt==null?"":it.mt}"></td><td><button class="x" data-d="1">✕</button></td></tr>`).join("")}
+$("tb").addEventListener("input",e=>{const t=e.target,i=+t.closest("tr").dataset.i,k=t.dataset.k;if(!k)return;it=items[i];it[k]=k=="n"?t.value:k=="s"?+t.checked:k=="mt"?(t.value===""?"":+t.value):k=="r"?+t.value:"lwh".includes(k)?+t.value*U():+t.value});
+$("tb").addEventListener("click",e=>{if(e.target.dataset.d){items.splice(+e.target.closest("tr").dataset.i,1);draw()}});
+$("add").onclick=()=>{items.push({n:"Product "+(items.length+1),l:50,w:40,h:30,wt:10,q:10,r:1,s:1});draw()};
+$("clr").onclick=()=>{items=[];draw()};
+
+// ---- packing (guillotine free-space, mixed items) ----
+function orients(it){const{l,w,h}=it;if(it.r)return[[l,w,h],[w,l,h]];return[[l,w,h],[l,h,w],[w,l,h],[w,h,l],[h,l,w],[h,w,l]]}
+function pack(list,c,ax,rn){let S=[{x:0,y:0,z:0,l:c.l,w:c.w,h:c.h,sup:-1}],P=[],rest=[],wt=0;
+ const ok=(j,w)=>{for(;j>=0;j=P[j].sup)if(P[j].ld+w>P[j].mt)return false;return true};
+ for(const it of list){if(c.p&&wt+it.wt>c.p){rest.push(it);continue}let best=null,bs=1e18;const O=orients(it);
+  for(let si=0;si<S.length;si++){const s=S[si];if(s.sup>=0&&!ok(s.sup,it.wt))continue;for(const o of O){if(o[0]<=s.l&&o[1]<=s.w&&o[2]<=s.h){const sc=(ax?s.z*1e6+s.y*1e3+s.x:s.x*1e6+s.y*1e3+s.z)+(s.l-o[0])*1e-3+(rn?Math.random()*rn:0);if(sc<bs){bs=sc;best={si,o,s}}}}}
+  if(!best){rest.push(it);continue}const{s,o}=best,[a,b,d]=o,k=P.length;S.splice(best.si,1);
+  P.push({i:it.i,x:s.x,y:s.y,z:s.z,l:a,w:b,h:d,wt:it.wt,sup:s.sup,ld:0,mt:it.mt==null?Infinity:it.mt});wt+=it.wt;
+  for(let j=s.sup;j>=0;j=P[j].sup)P[j].ld+=it.wt;
+  const add=[{x:s.x+a,y:s.y,z:s.z,l:s.l-a,w:s.w,h:s.h,sup:s.sup},{x:s.x,y:s.y,z:s.z+b,l:a,w:s.w-b,h:s.h,sup:s.sup}];if(it.s&&it.mt!==0)add.push({x:s.x,y:s.y+d,z:s.z,l:a,w:b,h:s.h-d,sup:k});
+  add.forEach(n=>{if(n.l>=1&&n.w>=1&&n.h>=1)S.push(n)})}
+ return{P,rest,wt}}
+function multi(c,rnd){let list=[];items.forEach((it,i)=>{for(let k=0;k<(it.q|0);k++)list.push({i,l:it.l,w:it.w,h:it.h,wt:it.wt,r:it.r,s:it.s,mt:it.mt===""||it.mt==null?Infinity:+it.mt,v:it.l*it.w*it.h})});
+ list.sort((a,b)=>b.v-a.v||b.s-a.s);const loads=[];let guard=0;
+ while(list.length&&guard++<30){const r=packBest(list,c,rnd);if(!r.P.length)break;loads.push(r);list=r.rest}return{loads,left:list}}
+function layer2D(L,W,a,b){const reach=M=>{const s=new Set();for(let i=0;i*a<=M;i++)for(let j=0;i*a+j*b<=M;j++)s.add(i*a+j*b);return[...s].sort((x,y)=>x-y)};
+ const X=reach(L),Y=reach(W);if(X.length*Y.length*(X.length+Y.length)>4e7)return null;
+ const dn=(A,v)=>{let lo=0,hi=A.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(A[m]<=v)lo=m;else hi=m-1}return lo};
+ const nx=X.length,ny=Y.length,N=new Int32Array(nx*ny).fill(-1),T=new Int32Array(nx*ny),V=new Int32Array(nx*ny);
+ const f=(xi,yi)=>{const id=xi*ny+yi;if(N[id]>=0)return N[id];const x=X[xi],y=Y[yi];let n=0,t=0,v=0;
+  if(a<=x&&b<=y){n=1;t=1}else if(b<=x&&a<=y){n=1;t=2}
+  for(let i=1;i<=xi&&X[i]*2<=x;i++){const r=dn(X,x-X[i]),s=f(i,yi)+f(r,yi);if(s>n){n=s;t=3;v=i}}
+  for(let j=1;j<=yi&&Y[j]*2<=y;j++){const r=dn(Y,y-Y[j]),s=f(xi,j)+f(xi,r);if(s>n){n=s;t=4;v=j}}
+  N[id]=n;T[id]=t;V[id]=v;return n};
+ const n=f(nx-1,ny-1),P=[];
+ const rec=(xi,yi,ox,oz)=>{const id=xi*ny+yi,t=T[id];if(t==1)P.push({x:ox,z:oz,l:a,w:b});else if(t==2)P.push({x:ox,z:oz,l:b,w:a});else if(t==3){const i=V[id];rec(i,yi,ox,oz);rec(dn(X,X[xi]-X[i]),yi,ox+X[i],oz)}else if(t==4){const j=V[id];rec(xi,j,ox,oz);rec(xi,dn(Y,Y[yi]-Y[j]),ox,oz+Y[j])}};
+ rec(nx-1,ny-1,0,0);return{n,P}}
+function uniform(list,c){const f=list[0];if(!f||list.some(x=>x.i!=f.i))return null;let best=null;const seen={};const Hw=f.mt!=null&&f.mt<Infinity&&f.wt>0?Math.floor(f.mt/f.wt)+1:Infinity;
+ for(const o of orients(f)){const key=o.join();if(seen[key])continue;seen[key]=1;
+  const a=Math.ceil(o[0]*10-1e-6),b=Math.ceil(o[1]*10-1e-6),H0=Math.floor(c.h/o[2]+1e-9),H=Math.min(f.s?H0:1,Hw);if(!H)continue;
+  const lay=layer2D(Math.floor(c.l*10),Math.floor(c.w*10),a,b);if(!lay||!lay.n)continue;const tot=lay.n*H;if(!best||tot>best.tot)best={tot,lay,h:o[2],H}}
+ if(!best)return null;const P=[];
+ for(let k=0;k<best.H;k++)for(const p of best.lay.P)P.push({x:p.x/10,y:k*best.h,z:p.z/10,l:p.l/10,w:p.w/10,h:best.h});
+ P.sort((p,q)=>p.x-q.x||p.y-q.y||p.z-q.z);const out=[],rest=[];let wt=0;
+ list.forEach(it=>{const p=P[out.length];if(p&&(!c.p||wt+it.wt<=c.p)){out.push({i:it.i,x:p.x,y:p.y,z:p.z,l:p.l,w:p.w,h:p.h,wt:it.wt});wt+=it.wt}else rest.push(it)});
+ return{P:out,rest,wt}}
+function packBest(list,c,rnd){const vol=r=>r.P.reduce((s,p)=>s+p.l*p.w*p.h,0);const cands=[];
+ [null,(a,b)=>b.h-a.h,(a,b)=>b.l*b.w-a.l*a.w,(a,b)=>Math.max(b.l,b.w,b.h)-Math.max(a.l,a.w,a.h)].forEach(f=>[0,1].forEach(ax=>cands.push(pack(f?list.slice().sort(f):list,c,ax))));
+ if(rnd)for(let k=0;k<6;k++){const ks=new Map(list.map(x=>[x,x.v*(.6+.8*Math.random())]));cands.push(pack(list.slice().sort((a,b)=>ks.get(b)-ks.get(a)),c,Math.random()<.5?1:0,1e7))}
+ const u=uniform(list,c);if(u)cands.push(u);let best=null,bv=-1;
+ cands.forEach(r=>{const v=vol(r);if(v>bv||(v==bv&&r.P.length>best.P.length)){best=r;bv=v}});return best}
+function fill(r,c){return r.P.reduce((s,p)=>s+p.l*p.w*p.h,0)/(c.l*c.w*c.h)}
+// ---- three.js ----
+const V=$("view");const R=new THREE.WebGLRenderer({antialias:true,alpha:true});V.prepend(R.domElement);const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(40,1,.1,200);
+sc.add(new THREE.AmbientLight(0xffffff,.65));const dl=new THREE.DirectionalLight(0xffffff,.7);dl.position.set(5,12,8);sc.add(dl);
+let grp=new THREE.Group();sc.add(grp);let th=.9,ph=1.1,rd=18,tg=new THREE.Vector3();
+function cm(){const x=Math.sin(ph)*Math.cos(th),z=Math.sin(ph)*Math.sin(th),y=Math.cos(ph);cam.position.set(tg.x+rd*x,tg.y+rd*y,tg.z+rd*z);cam.lookAt(tg);R.render(sc,cam)}
+function rs(){const w=V.clientWidth,h=V.clientHeight;R.setSize(w,h);R.setPixelRatio(devicePixelRatio);cam.aspect=w/h;cam.updateProjectionMatrix();cm()}addEventListener("resize",rs);
+let drag=null;V.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY,pan:e.button==2||e.shiftKey};V.setPointerCapture(e.pointerId)};
+V.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;if(drag.pan){const k=rd*.0015;const r=new THREE.Vector3().setFromMatrixColumn(cam.matrix,0);tg.addScaledVector(r,-dx*k);tg.y+=dy*k}else{th-=dx*.008;ph=Math.min(3,Math.max(.15,ph-dy*.008))}cm()};
+V.onpointerup=()=>drag=null;V.oncontextmenu=e=>e.preventDefault();V.onwheel=e=>{e.preventDefault();rd=Math.min(60,Math.max(3,rd*(1+e.deltaY*.001)));cm()};
+let meshes=[];
+const LM=new THREE.LineBasicMaterial({color:0x000000,transparent:true,opacity:.35});let GG={},GM={};
+function cartMesh(cl,ch,cw,col){const k=cl+"|"+ch+"|"+cw;let g=GG[k];if(!g){const bg=new THREE.BoxGeometry(cl*.0098,ch*.0098,cw*.0098);g=GG[k]={bg,eg:new THREE.EdgesGeometry(bg)}}let mt=GM[col];if(!mt)mt=GM[col]=new THREE.MeshLambertMaterial({color:col});const me=new THREE.Mesh(g.bg,mt);me.add(new THREE.LineSegments(g.eg,LM));return me}
+function show(){const c=C(),L=res.loads[cur];grp.clear();meshes=[];const m=1/100;
+ const cb=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(c.l*m,c.h*m,c.w*m)),new THREE.LineBasicMaterial({color:0x888888}));cb.position.set(c.l*m/2,c.h*m/2,c.w*m/2);grp.add(cb);
+ const fl=new THREE.Mesh(new THREE.PlaneGeometry(c.l*m,c.w*m),new THREE.MeshBasicMaterial({color:0x8899aa,transparent:true,opacity:.22,side:2}));fl.rotation.x=-Math.PI/2;fl.position.set(c.l*m/2,0,c.w*m/2);grp.add(fl);
+ const dr=new THREE.Mesh(new THREE.PlaneGeometry(c.w*m,c.h*m),new THREE.MeshBasicMaterial({color:0xd03b3b,transparent:true,opacity:.12,side:2}));dr.rotation.y=Math.PI/2;dr.position.set(c.l*m,c.h*m/2,c.w*m/2);grp.add(dr);
+ L.P.forEach((p,k)=>{const it0=items[p.i],fr=it0&&(!it0.s||(it0.mt!==""&&it0.mt!=null)),g=new THREE.BoxGeometry(p.l*m*.995,p.h*m*.995,p.w*m*.995);const me=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:PAL[p.i%10]}));me.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:fr?0xd03b3b:0x000000,transparent:true,opacity:fr?.95:.45})));if(it0&&it0.pal){const sl=new THREE.Mesh(new THREE.BoxGeometry(p.l*m,it0.pb*m,p.w*m),new THREE.MeshLambertMaterial({color:0xb08968}));sl.position.y=(it0.pb-p.h)*m/2;me.add(sl);
+ if(it0.cart&&$("cv").checked){me.material.transparent=true;me.material.opacity=.08;me.material.depthWrite=false;const ct=it0.cart,rot=it0.l!=it0.w&&Math.abs(p.l-it0.l)>.01;
+  for(let n=0;n<ct.n;n++){const q=ct.pat[n%ct.pat.length],ly=Math.floor(n/ct.pat.length);let cx=q.x,cz=q.z,cl=q.l,cw=q.w;if(rot)[cx,cz,cl,cw]=[cz,cx,cw,cl];
+   const cb=cartMesh(cl,ct.h,cw,PAL[p.i%10]);cb.position.set((cx+cl/2-p.l/2)*m,(ct.B+ly*ct.h+ct.h/2-p.h/2)*m,(cz+cw/2-p.w/2)*m);me.add(cb)}}}
+  me.position.set((p.x+p.l/2)*m,(p.y+p.h/2)*m,(p.z+p.w/2)*m);me.visible=k<step;grp.add(me);meshes.push(me)});
+ tg.set(c.l*m/2,c.h*m/2,c.w*m/2);rd=Math.max(c.l,c.w)*m*1.5+3;$("sl").max=L.P.length;cm();stats()}
+function vis(n){step=n;meshes.forEach((m,k)=>m.visible=k<n);$("sl").value=n;$("sn").textContent=`Box ${n} / ${meshes.length}`;cm()}
+$("sl").oninput=e=>{stop();vis(+e.target.value)};
+function stop(){clearInterval(timer);timer=null;$("pl").textContent="▶ Play loading"}
+$("pl").onclick=()=>{if(timer)return stop();if(step>=meshes.length)vis(0);$("pl").textContent="⏸ Pause";const d=Math.max(15,Math.min(120,4000/meshes.length));timer=setInterval(()=>{if(step>=meshes.length)return stop();vis(step+1)},d)};
+function stats(){const c=C(),L=res.loads[cur],tot=items.reduce((s,i)=>s+(i.q|0),0),pl=res.loads.reduce((s,l)=>s+l.P.length,0);
+ const f=fill(L,c)*100,wp=c.p?L.wt/c.p*100:0;let cx=0,cz=0;L.P.forEach(p=>{cx+=(p.x+p.l/2)*p.wt;cz+=(p.z+p.w/2)*p.wt});const W=L.wt||1;cx=cx/W/c.l*100;cz=cz/W/c.w*100;
+ $("stats").innerHTML=`<div class=st><b>${L.P.length}</b><i>boxes in this unit (${pl}/${tot} total)</i></div><div class=st><b>${res.loads.length}</b><i>unit(s) needed</i></div><div class=st><b>${f.toFixed(0)}%</b><i>volume used</i><div class=bar><div style="width:${f}%"></div></div></div><div class=st><b>${(L.wt).toFixed(0)} kg</b><i>of ${c.p} kg (${wp.toFixed(0)}%)</i><div class=bar><div style="width:${Math.min(100,wp)}%;background:${wp>100?"var(--bad)":""}"></div></div></div><div class=st><b>${cx.toFixed(0)}% / ${cz.toFixed(0)}%</b><i>centre of gravity (length / width)</i></div>`;
+ let m="";if(res.left.length)m+=`<div class=warn>⚠ ${res.left.length} item(s) could not be placed (too large for this space or over the weight limit).</div>`;
+ if(cx<35||cx>65&&L.P.length>3)m+=`<div class=warn>⚠ Load is unbalanced front-to-back – consider mixing heavy items toward the middle.</div>`;if(Math.abs(cz-50)>15&&L.P.length>3)m+=`<div class=warn>⚠ Load is off-centre sideways.</div>`;
+ $("msgs").innerHTML=m;const cnt={};L.P.forEach(p=>cnt[p.i]=(cnt[p.i]||0)+1);$("leg").innerHTML=items.map((it,i)=>`<span style="--c:${PAL[i%10]}">${it.n}: ${cnt[i]||0}/${it.q}${!it.s||(it.mt!==""&&it.mt!=null)?" ⚠":""}</span>`).join("")+'<span class=mu>⚠ red outline = do not stack / limited top load</span>';
+ $("tabs").innerHTML=res.loads.length>1?res.loads.map((_,i)=>`<button class="${i==cur?"":"g"}" onclick="cur=${i};step=1e9;show();vis(meshes.length)">Unit ${i+1}</button>`).join(""):""}
+function run(){stop();items=items.filter(i=>i.l>0&&i.w>0&&i.h>0&&i.q>0);const c=C();if(!items.length||!c.l){return}
+ res=multi(c);if(!res.loads.length){$("stats").innerHTML="";$("msgs").innerHTML='<div class=warn>Nothing fits in this cargo space.</div>';return}cur=0;step=1e9;show();vis(0);setTimeout(()=>$("pl").click(),150);compare();refCheck()}
+function compare(){let best=null,rows=[];for(const k in SP){if(k=="Custom")continue;const v=SP[k],c={l:v[0],w:v[1],h:v[2],p:v[3]},r=multi(c);const n=r.loads.length,ok=!r.left.length;const lf=n?fill(r.loads[n-1],c)*100:0;rows.push({k,n,ok,lf});}
+ const okr=rows.filter(r=>r.ok).sort((a,b)=>a.n-b.n||a.lf-b.lf);const bk=okr.length?okr.sort((a,b)=>a.n-b.n||(a.k.length-b.k.length))[0].k:"";
+ // best = fewest units; among 1-unit, smallest volume
+ const vol=k=>SP[k][0]*SP[k][1]*SP[k][2];const one=rows.filter(r=>r.ok&&r.n==1).sort((a,b)=>vol(a.k)-vol(b.k))[0];const B=(one||okr[0]||{}).k;
+ $("cmpc").style.display="";$("cmp").innerHTML=rows.map(r=>`<tr class="${r.k==B?"best":""}" onclick="$('sp').value='${r.k}';setSp();run()"><td>${r.k}${r.k==B?" ★":""}</td><td>${r.ok?r.n:"✕ doesn’t fit"}</td><td>${r.ok?r.lf.toFixed(0)+"%":"–"}</td></tr>`).join("")}
+function score(r,c){const n=r.loads.length;return r.left.length*1e9+n*1e6+(n?fill(r.loads[n-1],c):0)*1e3}
+$("th").onclick=()=>{if(!res)return run();stop();const c=C(),b=$("th");let best=res,it=0;const t0=Date.now();b.disabled=true;
+ const tick=()=>{const r=multi(c,true);it++;if(score(r,c)<score(best,c))best=r;b.textContent=`Searching… ${it} tries`;if(Date.now()-t0<4000)return setTimeout(tick,0);
+  b.disabled=false;b.textContent="🔍 Try harder";const cnt=x=>x.loads.reduce((s,l)=>s+l.P.length,0),o=cnt(res),n=cnt(best),ou=res.loads.length;let msg;
+  if(best!==res){const nu=best.loads.length;res=best;cur=0;step=1e9;show();vis(meshes.length);msg=`✔ Better layout found after ${it} tries: ${o} → ${n} boxes placed, ${ou} → ${nu} unit(s).`}
+  else msg=`No better layout found in ${it} tries – the current one is already the best of them.`;
+  $("msgs").insertAdjacentHTML("afterbegin",`<div style="font-size:12px;color:var(--ok);margin:4px 0">${msg}</div>`)};
+ setTimeout(tick,0)};
+const KEY="loadsim.v1";
+function save(){try{localStorage.setItem(KEY,JSON.stringify({items,catalog,un:$("un").value,sp:$("sp").value,c:C()}));$("svm").textContent="Saved ✓ "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}catch(e){$("svm").textContent="Saving isn’t available here"}}
+try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d&&d.items){items=d.items;catalog=d.catalog||[];$("un").value=d.un||"1";if(SP[d.sp]){$("sp").value=d.sp;setSp();if(d.sp=="Custom"&&d.c)["cl","cw","ch","cp"].forEach((id,i)=>$(id).value=[d.c.l,d.c.w,d.c.h,d.c.p][i])}}}catch(e){}
+const num=v=>{if(typeof v=="number")return isFinite(v)?v:NaN;if(typeof v!="string")return NaN;const s=v.trim().replace(/\s/g,"");if(!/^[\d.,]+(mm|cm|m)?$/i.test(s))return NaN;return parseFloat(s.replace(",","."))};
+const RX=[["q",/qty|quant|pcs|piece|count|adet|miktar|units|number of/i],["wt",/weight|\bwt\b|kg|mass|a[gğ][ıi]rl|br[uü]t|gross/i],["h",/height|y[uü]k|^h$|\bh\b/i],["w",/width|geni[sş]|\bgen\b|^w$|\bw\b|^en$|\ben\b/i],["l",/length|uzun|^l$|\bl\b|\bboy\b|depth|derin|\bder\b|^d$|\bd\b/i],["d",/dimension|size|ebat|boyut|measure/i],["n",/name|product|item|sku|desc|model|article|isim|[uü]r[uü]n|ad[ıi]|stok|code|kod|par[cç]a|material/i]];
+const role=s=>{if(typeof s!="string")return null;s=s.trim();if(!s||s.length>40)return null;for(const[r,x]of RX)if(x.test(s))return r;return null};
+const unitOf=s=>{s=String(s).toLowerCase();if(/\bmm\b|milim/.test(s))return .1;if(/\bcm\b|santim/.test(s))return 1;if(/\bm\b|meter|metre/.test(s))return 100;if(/inch|\bin\b|"/.test(s))return 2.54;return 0};
+const DX=/(\d+(?:[.,]\d+)?)\s*(?:mm|cm|m)?\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*(?:mm|cm|m)?\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|in)?/i;
+const dimStr=v=>{if(typeof v!="string")return null;const m=v.match(DX);return m?{d:[1,2,3].map(i=>parseFloat(m[i].replace(",","."))),u:m[4]?unitOf(m[4]):0}:null};
+const REF=/\b(20|40|45|53)\b|\bhc\b|\bdc\b|truck|t[ıi]r\b|trailer|kamyon|konteyner|container|\bvan\b|mega|jumbo/i;
+const numT=v=>typeof v=="string"&&/^[1-9]\d{0,2}(\.\d{3})+$/.test(v.trim())?+v.trim().replace(/\./g,""):num(v);
+const isTxt=v=>typeof v=="string"&&v.trim()&&isNaN(num(v))&&!dimStr(v);
+function findTable(A){let best=null;
+ for(let r=0;r<Math.min(A.length,80);r++){const map={};A[r].forEach((c,i)=>{const k=role(c);if(k&&!(k in map))map[k]=i});
+  if((map.l!=null&&map.w!=null&&map.h!=null)||map.d!=null){const sc=Object.keys(map).length;if(!best||sc>best.sc)best={r,map,sc}}}
+ if(!best)return null;const{r,map}=best;let un=0;for(const k of["l","w","h","d"])if(map[k]!=null&&!un)un=unitOf(A[r][map[k]]);
+ for(let k=1;k<=3&&!un&&r-k>=0;k++)for(const c of A[r-k])if(typeof c=="string"&&!un)un=unitOf(c);
+ if(map.n==null){const used=new Set(Object.values(map)),ref=Math.min(...["l","w","h","d"].filter(k=>map[k]!=null).map(k=>map[k])),cols=[],W=Math.max(...A.map(x=>x.length));
+  for(let c=0;c<W;c++){if(used.has(c))continue;let t=0,n=0;const set=new Set();for(let i=r+1;i<A.length;i++){const v=A[i][c];if(v===""||v==null)continue;n++;if(isTxt(v)){t++;set.add(v)}}if(n&&t/n>.6&&set.size>1)cols.push([Math.abs(c-ref),c])}
+  cols.sort((a,b)=>a[0]-b[0]);if(cols.length)map.n=cols[0][1]}
+ const refc=[],used2=new Set(Object.values(map));for(let c=0;c<A[r].length;c++){const h=A[r][c];if(!used2.has(c)&&typeof h=="string"&&h.trim().length<25&&REF.test(h))refc.push([c,h.trim().replace(/\s+/g," ")])}
+ const out=[];for(let i=r+1;i<A.length;i++){const row=A[i];let d;
+  if(map.d!=null){const s=dimStr(String(row[map.d]));if(s){d=s.d;if(s.u&&!un)un=s.u}}else d=["l","w","h"].map(k=>numT(row[map[k]]));
+  if(!d||d.some(x=>!(x>0)))continue;
+  out.push({n:map.n!=null&&row[map.n]!==""?String(row[map.n]).trim():"",l:d[0],w:d[1],h:d[2],wt:map.wt!=null?num(row[map.wt])||0:0,q:map.q!=null?Math.max(1,Math.round(num(row[map.q])||1)):1,ref:Object.fromEntries(refc.map(([c,k])=>[k,num(row[c])]).filter(x=>x[1]>0))})}
+ return{out,un,hdr:r+1}}
+function findLoose(A){const out=[];let un=0;
+ A.forEach((row,i)=>{let d=null,at=-1;
+  for(let c=0;c<row.length&&!d;c++){const s=dimStr(row[c]);if(s){d=s.d;at=c;if(s.u)un=s.u}}
+  if(!d)for(let c=0;c+2<row.length;c++){const t=[0,1,2].map(k=>numT(row[c+k]));if(t.every(x=>x>0)){d=t;at=c;break}}
+  if(!d)return;let nm="";
+  for(let c=at-1;c>=0&&!nm;c--)if(isTxt(row[c]))nm=row[c].trim();
+  for(let c=at+1;c<row.length&&!nm;c++)if(isTxt(row[c]))nm=row[c].trim();
+  for(let k=1;k<=2&&!nm&&i>=k;k++){const p=A[i-k];if(p.some(v=>dimStr(v))||p.filter(v=>num(v)>0).length>=3)break;const cand=[at,...p.keys()].find(c=>isTxt(p[c]));if(cand!=null)nm=p[cand].trim()}
+  out.push({n:nm,l:d[0],w:d[1],h:d[2],wt:0,q:1})});
+ return{out,un,hdr:0}}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const REFMAP=[[/53/,"53’ US trailer"],[/45/,"45’ High Cube"],[/40.*(hc|hq|high)/i,"40’ High Cube"],[/40/,"40’ Standard"],[/20/,"20’ Standard"],[/jumbo/i,"Jumbo trailer"],[/mega/i,"Mega trailer"],[/truck|t[ıi]r|trailer|13[.,]?6/i,"Semi-trailer 13.6 m"],[/kamyon/i,"Truck 10 t"],[/\bvan\b/i,"Van 3.5 t"]];
+const refKey=l=>{for(const[x,k]of REFMAP)if(x.test(l))return k;return null};
+const keyOf=p=>p.n+"|"+p.l+"|"+p.w+"|"+p.h;
+function vis_(){const q=catQ.toLowerCase();return catalog.map((p,i)=>i).filter(i=>!q||catalog[i].n.toLowerCase().includes(q)||catalog[i].sheet.toLowerCase().includes(q))}
+function addCat(i){const p=catalog[i],ex=items.find(x=>keyOf(x)==keyOf(p));if(ex)ex.q=(ex.q|0)+1;else items.push({n:p.n,l:p.l,w:p.w,h:p.h,wt:p.wt,q:p.q||1,r:1,s:1,ref:p.ref});draw()}
+function drawCat(){$("catc").style.display=catalog.length?"":"none";if(!catalog.length)return;const u=$("un").selectedOptions[0].text,cnt={},ms=new Set(catalog.map(p=>p.sheet)).size>1;items.forEach(x=>cnt[keyOf(x)]=x.q);
+ $("catl").innerHTML=vis_().map(i=>{const p=catalog[i],r=Object.entries(p.ref||{}).map(([a,b])=>a+": "+b).join(" · ");
+  return `<div class="ci" data-c="${i}"><div style="flex:1;min-width:0"><b>${esc(p.n)}</b><div class="mu">${fm(p.l)}×${fm(p.w)}×${fm(p.h)} ${u}${p.wt?" · "+p.wt+" kg":""}${r?" · table: "+esc(r):""}${ms?" · "+esc(p.sheet):""}</div></div><span class="b">${cnt[keyOf(p)]?"in list ×"+cnt[keyOf(p)]:"＋ Add"}</span></div>`}).join("")||"<div class=mu>No match.</div>"}
+const _draw=draw;draw=function(){_draw();drawCat();drawPal()};
+$("catl").onclick=e=>{const d=e.target.closest(".ci");if(d)addCat(+d.dataset.c)};
+$("cats").oninput=e=>{catQ=e.target.value;drawCat()};
+$("cata").onclick=()=>{vis_().forEach(addCat)};
+$("catx").onclick=()=>{catalog=[];$("imsg").textContent="";drawCat()};
+function refCheck(){const rows=[];items.forEach((it,i)=>{if(!it.ref)return;for(const[lab,val]of Object.entries(it.ref)){const k=refKey(lab);if(!k||!SP[k])continue;const v=SP[k],c={l:v[0],w:v[1],h:v[2],p:0},N=Math.min(3000,Math.ceil(val*1.5)+30);
+  const list=Array.from({length:N},()=>({i,l:it.l,w:it.w,h:it.h,wt:0,r:it.r,s:it.s,mt:it.mt===""||it.mt==null?Infinity:+it.mt,v:it.l*it.w*it.h})),sim=packBest(list,c).P.length,d=sim-val;
+  rows.push(`<tr><td>${esc(it.n)}</td><td>${esc(lab)} → ${esc(k)}</td><td>${val}</td><td>${sim}</td><td style="color:var(--${d>=0?"ok":"bad"})">${d>0?"+":""}${d}</td></tr>`)}});
+ $("refc").style.display=rows.length?"":"none";$("refb").innerHTML=rows.join("")}
+$("xl").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;const msg=$("imsg");
+ try{const wb=XLSX.read(await f.arrayBuffer(),{type:"array"});const all=[],info=[];let u0=0;
+  for(const sn of wb.SheetNames){const A=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:"",raw:true});if(!A.length)continue;
+   const W=Math.max(0,...A.map(r=>r.length)),T=Array.from({length:W},(_,c)=>A.map(r=>r[c]??""));
+   let t=null;for(const M of[A,T]){const x=findTable(M);if(x&&x.out.length&&(!t||x.out.length>t.out.length))t=x}
+   let how="";if(!t){t=findLoose(A);how=", by size pattern"}if(!t.out.length)continue;
+   let u=t.un,un;const mx=Math.max(...t.out.map(o=>Math.max(o.l,o.w,o.h)));
+   if(u){const o=$("un").querySelector(`[value="${u}"]`);un=o?o.text:"unit from file"}else{u=+$("un").value;if(u==1&&mx>400){u=.1;un="mm assumed"}else if(u==1&&mx<=4){u=100;un="m assumed"}else un=$("un").selectedOptions[0].text}
+   if(!u0)u0=u;t.out.forEach(o=>all.push({n:o.n||"Item "+(all.length+1),l:+(o.l*u).toFixed(2),w:+(o.w*u).toFixed(2),h:+(o.h*u).toFixed(2),wt:o.wt,q:o.q,ref:o.ref||{},sheet:sn}));
+   info.push(`${esc(sn)}: ${t.out.length} (${un}${how})`)}
+  if(!all.length){msg.innerHTML='<span class=warn>I couldn’t find product sizes in this file. Each product needs three numbers (length, width, height) or a size like 60x40x30.</span>';return}
+  catalog=all;catQ="";$("cats").value="";$("un").value=String(u0);draw();
+  msg.innerHTML=`<span style="color:var(--ok)">✔ Found ${all.length} products in ${info.length} sheet(s) – ${info.join("; ")}. Click a product below to add it to your list.</span>`;
+ }catch(err){msg.innerHTML='<span class=warn>Couldn’t read this file ('+esc(String(err.message||err).slice(0,80))+').</span>'}};
+function palPlan(it){if(!it)return null;const Pl=+$("pdl").value,Pw=+$("pdw").value,B=+$("pbh").value||0,Hm=+$("pmh").value,Wm=+$("pmw").value,Pk=+$("ppw").value||0;if(!(Pl>0&&Pw>0&&Hm>B))return null;let best=null;const seen={};
+ for(const o of orients(it)){const key=o.join();if(seen[key])continue;seen[key]=1;const a=Math.ceil(o[0]*10-1e-6),b=Math.ceil(o[1]*10-1e-6),La=Math.floor(Pl*10),Wa=Math.floor(Pw*10),layers=Math.floor((Hm-B)/o[2]+1e-9);if(layers<1)continue;
+  let pat;const lay=layer2D(La,Wa,a,b);const grid=()=>{const cA=Math.floor(La/a),rA=Math.floor(Wa/b),cB=Math.floor(La/b),rB=Math.floor(Wa/a),A=cA*rA>=cB*rB,[u,v,cc,rr]=A?[a,b,cA,rA]:[b,a,cB,rB],g=[];for(let i=0;i<cc;i++)for(let j=0;j<rr;j++)g.push({x:i*u,z:j*v,l:u,w:v});return g};
+  const raw=lay&&lay.n?lay.P:grid(),per=raw.length;if(!per)continue;pat=raw.map(q=>({x:q.x/10,z:q.z/10,l:q.l/10,w:q.w/10})).sort((p,q)=>p.x-q.x||p.z-q.z);
+  let tot=per*layers;if(it.wt>0)tot=Math.min(tot,Math.floor((Wm-Pk)/it.wt));if(!it.s)tot=Math.min(tot,per);if(it.mt!==""&&it.mt!=null&&it.wt>0)tot=Math.min(tot,per*(Math.floor(it.mt/it.wt)+1));
+  if(tot<1)continue;if(!best||tot>best.n)best={n:tot,per,h:o[2],pat}}
+ if(!best)return null;best.layers=Math.ceil(best.n/best.per);best.H=B+best.layers*best.h;best.Pl=Pl;best.Pw=Pw;best.Pk=Pk;best.B=B;return best}
+function palPrev(){const it=items[+$("pbp").value],pl=palPlan(it),el=$("ppv");if(!it||!pl){el.textContent=it?"This product doesn’t fit on that pallet with these limits.":"Add a product first.";return null}
+ const q=it.q|0,full=Math.floor(q/pl.n),rem=q-full*pl.n;el.innerHTML=`<b>${pl.n}</b> boxes per pallet (${pl.per} per layer × ${pl.layers} layers) · pallet ${pl.Pl}×${pl.Pw}×${pl.H.toFixed(0)} cm · ${(pl.n*it.wt+pl.Pk).toFixed(0)} kg<br>For ${q} boxes: ${full} full pallet(s)${rem?" + 1 partial pallet ("+rem+" boxes)":""}`;return pl}
+function drawPal(){const sel=$("pbp"),v=sel.value;sel.innerHTML=items.map((it,i)=>`<option value="${i}">${esc(it.n)} (${it.q})</option>`).join("");if(v&&items[+v])sel.value=v;palPrev()}
+$("cv").onchange=()=>{if(res){const k=step;show();vis(Math.min(k,meshes.length))}};
+["pdl","pdw","pbh","pmh","pmw","ppw"].forEach(id=>$(id).oninput=palPrev);$("pbp").onchange=palPrev;
+$("pbt").onchange=()=>{const v=$("pbt").value;if(v!="c"){const[a,b]=v.split(",");$("pdl").value=a;$("pdw").value=b}palPrev()};
+$("pgo").onclick=()=>{const i=+$("pbp").value,it=items[i],pl=palPrev();if(!pl)return;const q=it.q|0,full=Math.floor(q/pl.n),rem=q-full*pl.n,st=$("pst").checked?1:0,rows=[];
+ if(full)rows.push({n:it.n+" · pallet ×"+pl.n,l:pl.Pl,w:pl.Pw,h:+pl.H.toFixed(1),wt:+(pl.n*it.wt+pl.Pk).toFixed(1),q:full,r:1,s:st,mt:"",pal:1,pb:pl.B,cart:{pat:pl.pat,h:pl.h,B:pl.B,n:pl.n}});
+ if(rem)rows.push({n:it.n+" · partial pallet ("+rem+")",l:pl.Pl,w:pl.Pw,h:+(pl.B+Math.ceil(rem/pl.per)*pl.h).toFixed(1),wt:+(rem*it.wt+pl.Pk).toFixed(1),q:1,r:1,s:st,mt:"",pal:1,pb:pl.B,cart:{pat:pl.pat,h:pl.h,B:pl.B,n:rem}});
+ items.splice(i,1,...rows);draw();$("pmsg").innerHTML=`<span style="color:var(--ok)">✔ ${full} full${rem?" + 1 partial":""} pallet(s) added.</span> <button class="g" id="pundo" style="padding:2px 8px">Undo</button>`;
+ $("pundo").onclick=()=>{items.splice(i,rows.length,it);draw();$("pmsg").textContent=""}};
+// share
+const SHARE_URL=location.href.split("#")[0];
+const planCode=()=>btoa(unescape(encodeURIComponent(JSON.stringify({v:1,items,sp:$("sp").value,c:C(),un:$("un").value}))));
+function loadCode(code){const d=JSON.parse(decodeURIComponent(escape(atob(code.trim().replace(/^.*#plan=/,"")))));if(!d.items)throw 0;items=d.items;$("un").value=d.un||"1";if(SP[d.sp]){$("sp").value=d.sp;setSp();if(d.sp=="Custom"&&d.c)["cl","cw","ch","cp"].forEach((id,i)=>$(id).value=[d.c.l,d.c.w,d.c.h,d.c.p][i])}draw();run()}
+$("shr").onclick=async()=>{const code=planCode(),txt=`LoadSim plan - open this link:\n${SHARE_URL}#plan=${code}`,m=$("shm");
+ try{await navigator.clipboard.writeText(txt);m.textContent="Link copied ✓ – anyone who opens it sees your plan."}catch(e){m.innerHTML='Copy this text and send it: <input readonly style="width:100%" id="shc">';$("shc").value=txt;$("shc").select()}};
+$("opb").onclick=()=>{try{loadCode($("opn").value);$("shm").textContent="Plan loaded ✓"}catch(e){$("shm").innerHTML='<span class=warn>That code isn’t valid.</span>'}};
+// pdf
+const pt=s=>String(s).replace(/[’‘]/g,"'").replace(/[ğĞşŞıİ]/g,c=>({"ğ":"g","Ğ":"G","ş":"s","Ş":"S","ı":"i","İ":"I"}[c])).replace(/[→−–—]/g,"-").replace(/[^\x00-\xff]/g,"?");
+$("pdf").onclick=async()=>{const m=$("shm");if(!res){m.textContent="Run a calculation first.";return}if(!window.jspdf){m.textContent="PDF library didn’t load.";return}
+ let dl=window.claude?await window.claude.use("downloads"):null;if(!dl)dl={save:async({filename,data})=>{const a=document.createElement("a");a.href=URL.createObjectURL(data);a.download=filename;document.body.appendChild(a);a.click();a.remove()}};
+ stop();m.textContent="Building PDF…";const c=C(),keep={cur,th,ph};
+ try{const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"});let y=18;
+  const H1=t=>{doc.setFontSize(15);doc.setFont(undefined,"bold");doc.text(pt(t),14,y);doc.setFont(undefined,"normal");doc.setFontSize(9);y+=8};
+  const ln=(t,x=14)=>{if(y>284){doc.addPage();y=16}doc.text(pt(t),x,y);y+=5};
+  const snap=(t,p)=>{th=t;ph=p;cm();return R.domElement.toDataURL("image/png")};
+  const placed={};res.loads.forEach(L=>L.P.forEach(p=>placed[p.i]=(placed[p.i]||0)+1));
+  H1("Load plan");ln(`${new Date().toLocaleDateString()}  -  ${$("sp").value}: ${c.l} x ${c.w} x ${c.h} cm, max ${c.p} kg`);ln(`Units needed: ${res.loads.length}   Boxes placed: ${res.loads.reduce((a,l)=>a+l.P.length,0)}`);
+  if(res.left.length)ln(`WARNING: ${res.left.length} item(s) did not fit.`);y+=3;ln("Products (size in cm):");
+  items.forEach((it,i)=>ln(`${it.n} | ${it.l} x ${it.w} x ${it.h} | ${it.wt} kg | qty ${it.q} | placed ${placed[i]||0}${!it.s?" | DO NOT STACK":it.mt!==""&&it.mt!=null?" | max on top "+it.mt+" kg":""}`,16));
+  step=1e9;
+  for(let ui=0;ui<res.loads.length;ui++){cur=ui;show();vis(meshes.length);R.setClearColor(0xffffff,1);const a=snap(.9,1.1),b=snap(-Math.PI/2,.05);R.setClearColor(0x000000,0);
+   const L=res.loads[ui],ar=R.domElement.height/R.domElement.width,w=140,h=w*ar;doc.addPage();y=16;H1(`Unit ${ui+1} of ${res.loads.length}`);
+   ln(`${L.P.length} boxes  -  ${L.wt.toFixed(0)} kg  -  volume used ${(fill(L,c)*100).toFixed(0)}%`);const cnt={};L.P.forEach(p=>cnt[p.i]=(cnt[p.i]||0)+1);
+   ln(Object.entries(cnt).map(([i,n])=>items[i].n+": "+n).join("   "));y+=2;doc.addImage(a,"PNG",15,y,w,h);y+=h+4;doc.addImage(b,"PNG",15,y,w,h);
+   doc.addPage();y=16;H1(`Unit ${ui+1} - loading sequence`);ln("Start at the cab end; the door is at the far end. Distances in cm.");ln("Step | Product | from cab | from left wall | height");
+   L.P.forEach((p,k)=>ln(`${k+1} | ${items[p.i].n} | ${p.x.toFixed(0)} | ${p.z.toFixed(0)} | ${p.y.toFixed(0)}`,16))}
+  cur=keep.cur;show();vis(meshes.length);th=keep.th;ph=keep.ph;cm();
+  await dl.save({filename:"load-plan.pdf",data:doc.output("blob")});m.textContent="PDF ready ✓"}
+ catch(e){cur=keep.cur;show();vis(meshes.length);th=keep.th;ph=keep.ph;cm();m.textContent=e&&e.code=="declined"?"Download cancelled.":"Couldn’t create the PDF ("+String(e.message||e.code||e).slice(0,60)+")"}};
+$("sv").onclick=save;
+$("go").onclick=run;$("un").onchange=draw;draw();rs();run();try{if(location.hash.startsWith("#plan="))loadCode(location.hash.slice(6))}catch(e){}
+</script></body></html>
